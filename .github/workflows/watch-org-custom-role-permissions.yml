@@ -63,7 +63,7 @@ jobs:
           fi
 
       - name: Commit and push to a new branch
-        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_pr != true
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,7 +74,7 @@ jobs:
           git push origin "$BRANCH_NAME"
 
       - name: Create pull request for permission changes
-        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_pr != true
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
