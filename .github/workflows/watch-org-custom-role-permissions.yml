@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 0 1 * *'  # Run on the 1st of each month at 00:00 UTC
   workflow_dispatch:
+    inputs:
+      create_sample_issue:
+        description: 'Create a sample issue to verify issue creation works correctly'
+        type: boolean
+        default: false
 
 jobs:
   watch-permissions:
@@ -73,3 +78,30 @@ jobs:
           gh issue create \
             --title "Organization custom role permissions have been updated" \
             --body-file /tmp/issue-body.md
+
+      - name: Create sample issue for testing
+        if: github.event_name == 'workflow_dispatch' && inputs.create_sample_issue == true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          {
+            echo "This is a sample issue to verify that issue creation works correctly."
+            echo ""
+            echo '```diff'
+            echo '-[]'
+            echo '+['
+            echo '+  {'
+            echo '+    "description": "View organization roles",'
+            echo '+    "name": "read_organization_custom_org_role"'
+            echo '+  },'
+            echo '+  {'
+            echo '+    "description": "Manage custom organization roles",'
+            echo '+    "name": "write_organization_custom_org_role"'
+            echo '+  }'
+            echo '+]'
+            echo '```'
+          } > /tmp/sample-issue-body.md
+
+          gh issue create \
+            --title "[Sample] Organization custom role permissions have been updated" \
+            --body-file /tmp/sample-issue-body.md
