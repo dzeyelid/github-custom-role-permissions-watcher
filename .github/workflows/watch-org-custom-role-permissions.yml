@@ -33,15 +33,23 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORGANIZATION_NAME: ${{ secrets.ORGANIZATION_NAME }}
+          CREATE_SAMPLE_ISSUE: ${{ inputs.create_sample_issue }}
         run: |
           mkdir -p data
-          gh api \
-            --method GET \
-            --header "Accept: application/vnd.github+json" \
-            --header "X-GitHub-Api-Version: 2022-11-28" \
-            --paginate \
-            "/orgs/$ORGANIZATION_NAME/organization-fine-grained-permissions" \
-            | jq -S '.' > data/org-custom-role-permissions.json
+          if [ "$CREATE_SAMPLE_ISSUE" = "true" ]; then
+            jq -n '[
+              {"description":"View organization roles","name":"read_organization_custom_org_role"},
+              {"description":"Manage custom organization roles","name":"write_organization_custom_org_role"}
+            ]' | jq -S '.' > data/org-custom-role-permissions.json
+          else
+            gh api \
+              --method GET \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              --paginate \
+              "/orgs/$ORGANIZATION_NAME/organization-fine-grained-permissions" \
+              | jq -S '.' > data/org-custom-role-permissions.json
+          fi
 
       - name: Check for changes
         id: changes
@@ -55,7 +63,7 @@ jobs:
           fi
 
       - name: Commit and push updated permissions data
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_issue != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -75,40 +83,12 @@ jobs:
             echo '```'
           } > /tmp/issue-body.md
 
-          gh issue create \
-            --title "Organization custom role permissions have been updated" \
-            --body-file /tmp/issue-body.md
-
-      - name: Create sample issue for testing
-        if: github.event_name == 'workflow_dispatch' && inputs.create_sample_issue == true
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          cat <<'EOF' > /tmp/permissions-diff.txt
-          --- a/data/org-custom-role-permissions.json
-          +++ b/data/org-custom-role-permissions.json
-          @@ -1 +1,10 @@
-          -[]
-          +[
-          +  {
-          +    "description": "View organization roles",
-          +    "name": "read_organization_custom_org_role"
-          +  },
-          +  {
-          +    "description": "Manage custom organization roles",
-          +    "name": "write_organization_custom_org_role"
-          +  }
-          +]
-          EOF
-
-          {
-            echo "The available permissions for custom organization roles have been updated. Please review the differences."
-            echo ""
-            echo '```diff'
-            cat /tmp/permissions-diff.txt
-            echo '```'
-          } > /tmp/issue-body.md
+          if [ "${{ inputs.create_sample_issue }}" = "true" ]; then
+            ISSUE_TITLE="[Sample] Organization custom role permissions have been updated"
+          else
+            ISSUE_TITLE="Organization custom role permissions have been updated"
+          fi
 
           gh issue create \
-            --title "[Sample] Organization custom role permissions have been updated" \
+            --title "$ISSUE_TITLE" \
             --body-file /tmp/issue-body.md
