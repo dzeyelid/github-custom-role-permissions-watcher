@@ -84,24 +84,31 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          cat <<'EOF' > /tmp/permissions-diff.txt
+          --- a/data/org-custom-role-permissions.json
+          +++ b/data/org-custom-role-permissions.json
+          @@ -1 +1,10 @@
+          -[]
+          +[
+          +  {
+          +    "description": "View organization roles",
+          +    "name": "read_organization_custom_org_role"
+          +  },
+          +  {
+          +    "description": "Manage custom organization roles",
+          +    "name": "write_organization_custom_org_role"
+          +  }
+          +]
+          EOF
+
           {
-            echo "This is a sample issue to verify that issue creation works correctly."
+            echo "The available permissions for custom organization roles have been updated. Please review the differences."
             echo ""
             echo '```diff'
-            echo '-[]'
-            echo '+['
-            echo '+  {'
-            echo '+    "description": "View organization roles",'
-            echo '+    "name": "read_organization_custom_org_role"'
-            echo '+  },'
-            echo '+  {'
-            echo '+    "description": "Manage custom organization roles",'
-            echo '+    "name": "write_organization_custom_org_role"'
-            echo '+  }'
-            echo '+]'
+            cat /tmp/permissions-diff.txt
             echo '```'
-          } > /tmp/sample-issue-body.md
+          } > /tmp/issue-body.md
 
           gh issue create \
             --title "[Sample] Organization custom role permissions have been updated" \
-            --body-file /tmp/sample-issue-body.md
+            --body-file /tmp/issue-body.md
