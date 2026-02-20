@@ -5,8 +5,8 @@ on:
     - cron: '0 0 1 * *'  # Run on the 1st of each month at 00:00 UTC
   workflow_dispatch:
     inputs:
-      create_sample_issue:
-        description: 'Create a sample issue to verify issue creation works correctly'
+      create_sample_pr:
+        description: 'Create a sample pull request to verify pull request creation works correctly'
         type: boolean
         default: false
 
@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      issues: write
+      pull-requests: write
 
     steps:
       - name: Checkout
@@ -33,10 +33,10 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
           ORGANIZATION_NAME: ${{ secrets.ORGANIZATION_NAME }}
-          CREATE_SAMPLE_ISSUE: ${{ inputs.create_sample_issue }}
+          CREATE_SAMPLE_PR: ${{ inputs.create_sample_pr }}
         run: |
           mkdir -p data
-          if [ "$CREATE_SAMPLE_ISSUE" = "true" ]; then
+          if [ "$CREATE_SAMPLE_PR" = "true" ]; then
             jq -n '[
               {"description":"View organization roles","name":"read_organization_custom_org_role"},
               {"description":"Manage custom organization roles","name":"write_organization_custom_org_role"}
@@ -62,15 +62,18 @@ jobs:
             git diff --cached -- data/org-custom-role-permissions.json > /tmp/permissions-diff.txt
           fi
 
-      - name: Commit and push updated permissions data
-        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_issue != true
+      - name: Commit and push to a new branch
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH_NAME="update/org-custom-role-permissions-$(date +'%Y%m%d%H%M%S')"
+          echo "branch_name=$BRANCH_NAME" >> "$GITHUB_ENV"
+          git checkout -b "$BRANCH_NAME"
           git commit -m "Update organization custom role permissions data"
-          git push
+          git push origin "$BRANCH_NAME"
 
-      - name: Create issue for permission changes
+      - name: Create pull request for permission changes
         if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
@@ -81,14 +84,16 @@ jobs:
             echo '```diff'
             cat /tmp/permissions-diff.txt
             echo '```'
-          } > /tmp/issue-body.md
+          } > /tmp/pr-body.md
 
-          if [ "${{ inputs.create_sample_issue }}" = "true" ]; then
-            ISSUE_TITLE="[Sample] Organization custom role permissions have been updated"
+          if [ "${{ inputs.create_sample_pr }}" = "true" ]; then
+            PR_TITLE="[Sample] Organization custom role permissions have been updated"
           else
-            ISSUE_TITLE="Organization custom role permissions have been updated"
+            PR_TITLE="Organization custom role permissions have been updated"
           fi
 
-          gh issue create \
-            --title "$ISSUE_TITLE" \
-            --body-file /tmp/issue-body.md
+          gh pr create \
+            --title "$PR_TITLE" \
+            --body-file /tmp/pr-body.md \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "$branch_name"
