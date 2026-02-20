@@ -63,7 +63,7 @@ jobs:
           fi
 
       - name: Commit and push to a new branch
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_pr != true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -74,7 +74,7 @@ jobs:
           git push origin "$BRANCH_NAME"
 
       - name: Create pull request for permission changes
-        if: steps.changes.outputs.changed == 'true'
+        if: steps.changes.outputs.changed == 'true' && inputs.create_sample_pr != true
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -95,4 +95,5 @@ jobs:
           gh pr create \
             --title "$PR_TITLE" \
             --body-file /tmp/pr-body.md \
+            --base "${{ github.event.repository.default_branch }}" \
             --head "$branch_name"
