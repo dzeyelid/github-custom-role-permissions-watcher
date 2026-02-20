@@ -36,7 +36,7 @@ jobs:
             --header "X-GitHub-Api-Version: 2022-11-28" \
             --paginate \
             "/orgs/$ORGANIZATION_NAME/organization-fine-grained-permissions" \
-            > data/org-custom-role-permissions.json
+            | jq -S '.' > data/org-custom-role-permissions.json
 
       - name: Check for changes
         id: changes
