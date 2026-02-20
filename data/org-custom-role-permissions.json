@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "description": "View organization roles",
+    "name": "read_organization_custom_org_role"
+  },
+  {
+    "description": "Manage custom organization roles",
+    "name": "write_organization_custom_org_role"
+  }
+]
